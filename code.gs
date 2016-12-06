@@ -125,7 +125,7 @@ function saveSheetstoPDF() {
  * @param {string} filename - The filename to use for the newly-created file.
  * @param {string} url - The url of the file to download, e.g. http://example.com/files/foo.pdf
  */
-function saveAppToDrive(foldername, filename, url) {
+function saveFileToDrive(foldername, filename, url) {
   // Download the file at the specified URL, and abort if we encounter an error.
   var webResponse = UrlFetchApp.fetch(url);
   if (Math.floor(webResponse.getResponseCode() / 100) != 2) {
