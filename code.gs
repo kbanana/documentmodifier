@@ -118,3 +118,45 @@ function saveSheetstoPDF() {
     }  
   } 
 } 
+
+/**
+ * Downloads a file from the internet and saves it to your Google Drive.
+ * @param {string} foldername - The name of the folder in Drive where the file should be saved.
+ * @param {string} filename - The filename to use for the newly-created file.
+ * @param {string} url - The url of the file to download, e.g. http://example.com/files/foo.pdf
+ */
+function saveAppToDrive(foldername, filename, url) {
+  // Download the file at the specified URL, and abort if we encounter an error.
+  var webResponse = UrlFetchApp.fetch(url);
+  if (Math.floor(webResponse.getResponseCode() / 100) != 2) {
+    Logger.log("Unable to download file! Response code was " + webResponse.getResponseCode() + ".");
+    return;
+  }
+  
+  // Locate the destination folder in Google Drive (there should only be one folder with this name!)
+  var folders = DriveApp.getFoldersByName(foldername);
+  var folderMatches = [];
+  while (folders.hasNext()) {
+    folderMatches.push(folders.next());
+  }
+  
+  // Abort if we find multiple folders with the same name.
+  if (folderMatches.length != 1) {
+    Logger.log("Unable to find the destination folder in Drive. Found " + folderMatches.length + " matching folders, expected exactly 1.");
+    return;
+  }
+  
+  // Abort if the destination folder already contains a file with the desired filename.
+  var folder = folderMatches[0];
+  if (folder.getFilesByName(filename).hasNext()) {
+    Logger.log("Unable to upload the file to Drive - there's already a file named " + filename + " in the destination folder.");
+    return;
+  }
+  
+  // All preflight checks are complete. We can safely create the file and save it in Drive.
+  var data = webResponse.getBlob();
+  var newFile = DriveApp.createFile(data);
+  newFile.setName(filename);
+  folder.addFile(newFile);
+  Logger.log("File downloaded and saved to Drive!");
+}
