@@ -84,10 +84,22 @@ function WrapandCenterText() {
 }
 
 
+/**
+ * Main entry point function for the PDF saver script
+ */
+function saveTestEvalPDFs() {
+  saveSheetsToPDF('TestEvals', 'FALL16', false);
+}
 
-function saveSheetstoPDF() {
+/**
+ * Helper function to save spreadsheets in a given folder as PDFs into the user's Drive.
+ * @param {string} rootFolderName - The root Drive folder to search for spreadsheet files.
+ * @param {string} sheetName - The name of the sheet tab that should be used for the PDF conversion.
+ * @param {boolean} isPortrait - Whether or not to export the PDF in portrait mode.
+ */
+function saveSheetsToPDF(rootFolderName, sheetName, isPortrait) {
   // Grab the root folder.
-  var rootFolderIterator = DriveApp.getFoldersByName('TestEvals');
+  var rootFolderIterator = DriveApp.getFoldersByName(rootFolderName);
   if (rootFolderIterator.hasNext()) {
     var rootFolder = rootFolderIterator.next();
     
@@ -106,13 +118,19 @@ function saveSheetstoPDF() {
         
         // Export file to PDF
         var pdfexport = 'export?exportFormat=pdf&format=pdf'
-        var options = '&gid=' + spreadsheet.getSheetByName('FALL16')
+        var options = '&gid=' + spreadsheet.getSheetByName(sheetName).getSheetId()
         + '&size=letter'      // paper size
-        + '&portrait=true'    // orientation, false for landscape
+        + '&portrait=' + isPortrait    // orientation, false for landscape
         + '&fitw=true'        // fit to width, false for actual size
         + '&sheetnames=false&printtitle=false&pagenumbers=true'  //hide optional headers and footers
         + '&gridlines=true'  // show gridlines
-        + '&fzr=false';       // do not repeat row headers (frozen rows) on each page
+        + '&fzr=false'; // do not repeat row headers (frozen rows) on each page
+        
+        // Create the final PDF url
+        var url = 'https://docs.google.com/spreadsheets/d/' + spreadsheet.getId() + '/' + pdfexport + options;
+        
+        // Download the URL to my Drive.
+        saveFileToDrive('MyDownloads', 'PDF - ' + spreadsheet.getName(), url, ScriptApp.getOAuthToken());
         
       }
     }  
@@ -120,14 +138,26 @@ function saveSheetstoPDF() {
 } 
 
 /**
- * Downloads a file from the internet and saves it to your Google Drive.
+ * Helper function to save an arbitrary file from the Internet as a file in the user's Drive.
  * @param {string} foldername - The name of the folder in Drive where the file should be saved.
  * @param {string} filename - The filename to use for the newly-created file.
  * @param {string} url - The url of the file to download, e.g. http://example.com/files/foo.pdf
+ * @param {string} oauthToken - The OAuth2 token for the currently running script, obtained via ScriptApp.getOauthToken().
  */
-function saveFileToDrive(foldername, filename, url) {
+function saveFileToDrive(foldername, filename, url, oauthToken) {
+  // Prepare the download options for our web request.
+  var fetchOptions = null;
+  if (oauthToken != null) {
+    fetchOptions = {
+      headers: {
+        Authorization: 'Bearer ' + oauthToken
+      },
+      muteHttpExceptions: true
+    };
+  }
+  
   // Download the file at the specified URL, and abort if we encounter an error.
-  var webResponse = UrlFetchApp.fetch(url);
+  var webResponse = UrlFetchApp.fetch(url, fetchOptions);
   if (Math.floor(webResponse.getResponseCode() / 100) != 2) {
     Logger.log("Unable to download file! Response code was " + webResponse.getResponseCode() + ".");
     return;
